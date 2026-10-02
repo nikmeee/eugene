@@ -1,0 +1,27 @@
+[project]
+name = "netdoctor"
+version = "0.1.0"
+description = "Краб Клешня выясняет, почему не работает интернет: Wi-Fi, роутер, провайдер, VPN, DNS и блокировки — в одном стильном отчёте в терминале"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+authors = [{ name = "Jora" }]
+keywords = ["network", "diagnostics", "tui", "terminal", "vpn", "dns", "wifi", "dpi"]
+classifiers = [
+    "Environment :: Console",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Networking :: Monitoring",
+]
+dependencies = ["rich>=13"]
+
+[project.urls]
+Homepage = "https://github.com/nikmeee/netdoctor"
+
+[project.scripts]
+netdoctor = "netdoctor.app:cli"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
