@@ -161,7 +161,7 @@ class Doctor:
             self.node("router", FAIL, "нет доступа")
             self.findings.append((FAIL, "У этого терминала нет доступа к сети",
                                   "Система не даёт программе открывать соединения — роутер тут ни при чём. "
-                                  "Запусти netdoctor в обычном Terminal.app или iTerm. Если и там так — проверь "
+                                  "Запусти eugene в обычном Terminal.app или iTerm. Если и там так — проверь "
                                   "фаервол (Little Snitch, LuLu) или профили управления устройством."))
             return False
         if self.vpn:

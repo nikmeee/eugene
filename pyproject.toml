@@ -1,7 +1,7 @@
 [project]
-name = "netdoctor"
-version = "0.1.0"
-description = "Краб Клешня выясняет, почему не работает интернет: Wi-Fi, роутер, провайдер, VPN, DNS и блокировки — в одном стильном отчёте в терминале"
+name = "eugene-crab"
+version = "0.2.0"
+description = "Юджин — краб, который выясняет, почему не работает интернет: Wi-Fi, роутер, провайдер, VPN, DNS и блокировки — в одном стильном отчёте в терминале"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -17,11 +17,14 @@ classifiers = [
 dependencies = ["rich>=13"]
 
 [project.urls]
-Homepage = "https://github.com/nikmeee/netdoctor"
+Homepage = "https://github.com/nikmeee/eugene"
 
 [project.scripts]
-netdoctor = "netdoctor.app:cli"
+eugene = "eugene.app:cli"
 
 [build-system]
 requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/eugene"]

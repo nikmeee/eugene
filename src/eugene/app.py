@@ -1,4 +1,4 @@
-"""🦀 netdoctor — краб Клешня выясняет, почему не работает интернет."""
+"""🦀 Eugene — краб, который выясняет, почему не работает интернет."""
 
 import argparse
 import json
@@ -124,8 +124,8 @@ def score_stops(score):
 
 def header():
     t = Text(" ")
-    t.append_text(gradient_text("N E T D O C T O R", TITLE))
-    t.append("   диагностика сети", style=DIM)
+    t.append_text(gradient_text("E U G E N E", TITLE))
+    t.append("   сетевой доктор", style=DIM)
     t.append("  v%s" % __version__, style=FAINT)
     return t
 
@@ -463,7 +463,7 @@ def to_json(doc):
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="netdoctor", description="Краб Клешня выясняет, почему не работает интернет")
+    ap = argparse.ArgumentParser(prog="eugene", description="Краб Юджин выясняет, почему не работает интернет")
     ap.add_argument("-V", "--version", action="version", version="%(prog)s " + __version__)
     ap.add_argument("-q", "--quick", action="store_true", help="быстрая проверка (меньше пингов)")
     ap.add_argument("-s", "--site", action="append", metavar="ДОМЕН", help="проверить ещё сайт (можно несколько раз)")
@@ -488,7 +488,7 @@ def main():
                 worker.join(0.1)
         console.print(final_view(doc, console))
     except KeyboardInterrupt:
-        console.print("\n  [grey50]🦀 Клешня уполз. Прервано.[/]")
+        console.print("\n  [grey50]🦀 Юджин уполз. Прервано.[/]")
         return 130
     return 0 if doc.score is None or doc.score >= 60 else 1
 

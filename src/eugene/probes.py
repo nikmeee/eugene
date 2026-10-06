@@ -19,7 +19,7 @@ import time
 
 IS_MAC = sys.platform == "darwin"
 IP_BOUND_IF = 25  # macOS <netinet/in.h>
-UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) netdoctor"
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) eugene"
 FAKE_IP_NET = ipaddress.ip_network("198.18.0.0/15")  # fake-ip DNS у Clash / sing-box / Shadowrocket
 TUNNEL_PREFIXES = ("utun", "tun", "ppp", "ipsec", "wg", "tap", "gpd")
 
