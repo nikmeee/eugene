@@ -455,18 +455,31 @@ def main():
             doc.run()
             print(json.dumps(to_json(doc.snapshot()), ensure_ascii=False, indent=2))
             return 0
-        worker = threading.Thread(target=doc.run, daemon=True)
+        worker_error = []
+
+        def run_doctor():
+            try:
+                doc.run()
+            except BaseException as exc:
+                worker_error.append(exc)
+
+        worker = threading.Thread(target=run_doctor, daemon=True)
         worker.start()
         with Live(get_renderable=lambda: live_view(doc.snapshot(), console), console=console,
                   refresh_per_second=12, transient=True):
             while worker.is_alive():
                 worker.join(0.1)
+        if worker_error:
+            raise worker_error[0]
         console.print(final_view(doc.snapshot(), console))
     except KeyboardInterrupt:
-        console.print("\n  [grey50]🦀 Юджин уполз. Прервано.[/]")
+        Console(stderr=True).print("\n  [grey50]🦀 Юджин уполз. Прервано.[/]")
         return 130
+    except Exception as exc:
+        Console(stderr=True).print("  [bold red]Юджин не смог закончить проверку:[/] %s" % exc)
+        return 2
     score = doc.snapshot().score
-    return 0 if score is None or score >= 60 else 1
+    return 0 if score is not None and score >= 60 else 1
 
 
 def cli():

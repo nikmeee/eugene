@@ -54,6 +54,9 @@ class Doctor:
         self.lock = threading.Lock()
         self._wifi_future = None
         self.report = Report(started=time.perf_counter(), phrase=PHRASES["scan"][0], mood="think")
+        for key, label in (("mac", "Mac"), ("link", "Сеть"), ("router", "Роутер"),
+                           ("isp", "Провайдер"), ("dns", "DNS"), ("sites", "Сайты")):
+            self.node(key, label=label)
 
     # ───────────────────────── служебное ─────────────────────────
 
@@ -104,9 +107,6 @@ class Doctor:
     # ───────────────────────── шаги ─────────────────────────
 
     def run(self):
-        for key, label in (("mac", "Mac"), ("link", "Сеть"), ("router", "Роутер"),
-                           ("isp", "Провайдер"), ("dns", "DNS"), ("sites", "Сайты")):
-            self.node(key, label=label)
         pool = ThreadPoolExecutor(max_workers=24)
         try:
             if not self.step_scan(pool):
@@ -268,7 +268,8 @@ class Doctor:
         phys = self.report.phys
         cnt = 6 if self.quick else 10
         futs = [pool.submit(p.ping, ip, cnt, 0.2, phys) for _, ip in PING_TARGETS]
-        meta_ip = self._direct_ip("speed.cloudflare.com")
+        meta_ips = self._direct_ips("speed.cloudflare.com")
+        meta_ip = meta_ips[0] if meta_ips else None
         meta_f = pool.submit(p.cf_meta, phys, meta_ip) if meta_ip else None
         cap_f = pool.submit(p.captive_portal, phys)
         v6_f = pool.submit(p.ipv6_available)
@@ -330,12 +331,37 @@ class Doctor:
             self.finding(WARN, "Медленный VPN-сервер (%.0f мс)" % vpn_rtt,
                          "Сервер далеко или перегружен. Выбери сервер поближе — Финляндия, Нидерланды, Германия.")
 
-    def _direct_ip(self, host):
+    def _direct_ips(self, host, limit=3):
+        ips = []
         for srv in DIRECT_RESOLVERS:
             d = p.dns_query(srv, host, self.report.phys)
-            if d["ips"]:
-                return d["ips"][0]
-        return None
+            for ip in d["ips"]:
+                if ip not in ips:
+                    ips.append(ip)
+                    if len(ips) >= limit:
+                        return ips
+        return ips
+
+    def _probe_direct(self, host):
+        attempts = [
+            p.http_probe(host, ip=ip, iface=self.report.phys, timeout=5)
+            for ip in self._direct_ips(host)
+        ]
+        if not attempts:
+            return {"host": host, "ip": None, "dns": None, "tcp": None, "tls": None, "http": None,
+                    "status": None, "stage": "dns", "error": "домен не резолвится"}
+        for result in attempts:
+            if not result["error"]:
+                return result
+        stage_rank = {"dns": 0, "tcp": 1, "tls": 2, "http": 3}
+        return max(attempts, key=lambda r: stage_rank.get(r["stage"], -1))
+
+    def _record_site_result(self, result):
+        with self.lock:
+            self.report.site_results.append(result)
+            done = len(self.report.site_results)
+            self.report.nodes["sites"]["value"] = "%d/%d" % (done, len(self.sites))
+            return done
 
     def step_dns(self, pool):
         self.say("dns")
@@ -386,24 +412,15 @@ class Doctor:
         self.say("sites")
         self.node("sites", ACTIVE, "0/%d" % len(self.sites))
         use_vpn = self.report.vpn
-        phys = self.report.phys
         vpn_app = self.report.vpn_apps[0] if self.report.vpn_apps else "VPN"
 
         def probe(item):
             name, host = item
             via = p.http_probe(host) if use_vpn else None
-            ip = self._direct_ip(host)
-            if ip:
-                direct = p.http_probe(host, ip=ip, iface=phys, timeout=5)
-            else:
-                direct = {"host": host, "ip": None, "dns": None, "tcp": None, "tls": None, "http": None,
-                          "status": None, "stage": "dns", "error": "домен не резолвится"}
+            direct = self._probe_direct(host)
             res = (name, host, via, direct)
             eff = via if use_vpn else direct
-            with self.lock:
-                self.report.site_results.append(res)
-                done = len(self.report.site_results)
-            self.node("sites", value="%d/%d" % (done, len(self.sites)))
+            self._record_site_result(res)
             if eff["error"]:
                 self.log(FAIL, "%s: %s" % (name, eff["error"]))
             return res
