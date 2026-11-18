@@ -8,7 +8,6 @@ resolution-markers = [
 
 [[package]]
 name = "eugene-crab"
-version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "rich" },
