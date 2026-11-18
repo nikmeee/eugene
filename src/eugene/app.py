@@ -17,7 +17,8 @@ from rich.text import Text
 from . import __version__
 from . import probes as p
 from .crab import crab_text
-from .doctor import ACTIVE, FAIL, OK, PENDING, SKIP, WARN, Doctor, country_name, reason_of, short_org
+from .doctor import ACTIVE, FAIL, OK, PENDING, SKIP, WARN, Doctor, country_name, short_org
+from .report import to_json
 
 CORAL = "#ff6a4d"
 SEA = "#5cc8ff"
@@ -433,32 +434,6 @@ def final_view(doc, console):
                  subtitle=Text(" проверено за %.1f с " % (time.perf_counter() - doc.started), style=FAINT))
 
 
-# ─────────────────────────────── JSON ──────────────────────────────
-
-
-def to_json(doc):
-    def site(r):
-        if r is None:
-            return None
-        return {"ok": not r["error"], "error": r["error"], "stage": r["stage"], "status": r["status"],
-                "ms": round(p.total_ms(r), 1), "reason": reason_of(r) if r["error"] else None}
-
-    return {
-        "score": doc.score,
-        "headline": doc.headline,
-        "interface": doc.phys, "router": doc.gw, "router_brand": doc.router_brand,
-        "wifi": doc.wifi,
-        "router_ping": doc.router_ping and {k: doc.router_ping[k] for k in ("avg", "jitter", "loss")},
-        "isp": (doc.meta_direct or {}).get("asOrganization"),
-        "vpn": {"active": doc.vpn, "apps": doc.vpn_apps, "exit_country": (doc.meta_vpn or {}).get("country"),
-                "rtt_ms": doc.vpn_rtt} if doc.vpn else {"active": False},
-        "pings": {r["host"]: {k: r[k] for k in ("avg", "jitter", "loss")} for _, r in doc.isp_pings},
-        "dns": {"system": doc.sys_dns},
-        "sites": {name: {"via_vpn": site(v), "direct": site(d)} for name, _, v, d in doc.site_results},
-        "findings": [{"level": l, "title": t, "tip": tip} for l, t, tip in doc.findings],
-    }
-
-
 # ─────────────────────────────── main ──────────────────────────────
 
 
@@ -478,19 +453,20 @@ def main():
     try:
         if args.json:
             doc.run()
-            print(json.dumps(to_json(doc), ensure_ascii=False, indent=2))
+            print(json.dumps(to_json(doc.snapshot()), ensure_ascii=False, indent=2))
             return 0
         worker = threading.Thread(target=doc.run, daemon=True)
         worker.start()
-        with Live(get_renderable=lambda: live_view(doc, console), console=console,
+        with Live(get_renderable=lambda: live_view(doc.snapshot(), console), console=console,
                   refresh_per_second=12, transient=True):
             while worker.is_alive():
                 worker.join(0.1)
-        console.print(final_view(doc, console))
+        console.print(final_view(doc.snapshot(), console))
     except KeyboardInterrupt:
         console.print("\n  [grey50]🦀 Юджин уполз. Прервано.[/]")
         return 130
-    return 0 if doc.score is None or doc.score >= 60 else 1
+    score = doc.snapshot().score
+    return 0 if score is None or score >= 60 else 1
 
 
 def cli():

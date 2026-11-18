@@ -204,14 +204,62 @@ def bind(sock, iface):
         sock.setsockopt(socket.IPPROTO_IP, IP_BOUND_IF, socket.if_nametoindex(iface))
 
 
+class DnsParseError(ValueError):
+    """Ответ DNS пришёл, но разобрать его нельзя."""
+
+
 def _skip_name(data, i):
-    while True:
+    """Смещается за имя. Указатель сжатия пропускается, а не преследуется:
+    иначе петля C0 xx → тот же байт крутит разбор вечно."""
+    end = len(data)
+    for _ in range(128):
+        if i >= end:
+            raise DnsParseError("обрезанное имя")
         n = data[i]
         if n == 0:
             return i + 1
         if n & 0xC0 == 0xC0:
+            if i + 1 >= end:
+                raise DnsParseError("обрезанный указатель")
             return i + 2
+        if n & 0xC0:
+            raise DnsParseError("неизвестная метка")
+        if i + 1 + n > end:
+            raise DnsParseError("обрезанная метка")
         i += n + 1
+    raise DnsParseError("слишком длинное имя")
+
+
+def parse_dns_answers(data, tid):
+    """Разбирает ответ A-запроса с нашим id. None — пакет чужой или слишком короткий."""
+    if len(data) < 12:
+        return None
+    got, flags, qd, an, _ns, _ar = struct.unpack(">HHHHHH", data[:12])
+    if got != tid:
+        return None
+    if qd > 8:
+        raise DnsParseError("слишком много вопросов")
+    i = 12
+    for _ in range(qd):
+        i = _skip_name(data, i)
+        if i + 4 > len(data):
+            raise DnsParseError("обрезанный вопрос")
+        i += 4
+    ips = []
+    for _ in range(min(an, 32)):
+        if i >= len(data):
+            break
+        i = _skip_name(data, i)
+        if i + 10 > len(data):
+            raise DnsParseError("обрезанный ответ")
+        typ, _cls, _ttl, ln = struct.unpack(">HHIH", data[i : i + 10])
+        i += 10
+        if i + ln > len(data):
+            raise DnsParseError("обрезанные данные")
+        if typ == 1 and ln == 4:
+            ips.append(socket.inet_ntoa(data[i : i + 4]))
+        i += ln
+    return {"rcode": flags & 0x000F, "ips": ips}
 
 
 def dns_query(server, name, iface=None, timeout=2.0):
@@ -228,21 +276,14 @@ def dns_query(server, name, iface=None, timeout=2.0):
         s.sendto(q, (server, 53))
         while True:
             data = s.recv(4096)
-            if struct.unpack(">H", data[:2])[0] == tid:
-                break
-        ms = (time.perf_counter() - t0) * 1000
-        rcode = data[3] & 0x0F
-        an = struct.unpack(">H", data[6:8])[0]
-        i = _skip_name(data, 12) + 4
-        ips = []
-        for _ in range(an):
-            i = _skip_name(data, i)
-            typ, _cls, _ttl, ln = struct.unpack(">HHIH", data[i : i + 10])
-            i += 10
-            if typ == 1 and ln == 4:
-                ips.append(socket.inet_ntoa(data[i : i + 4]))
-            i += ln
-        return {"ms": ms, "rcode": rcode, "ips": ips, "error": None}
+            try:
+                parsed = parse_dns_answers(data, tid)
+            except DnsParseError:
+                return {"ms": None, "rcode": None, "ips": [], "error": "битый ответ DNS"}
+            if parsed is None:
+                continue
+            ms = (time.perf_counter() - t0) * 1000
+            return {"ms": ms, "rcode": parsed["rcode"], "ips": parsed["ips"], "error": None}
     except socket.timeout:
         return {"ms": None, "rcode": None, "ips": [], "error": "таймаут"}
     except Exception as e:

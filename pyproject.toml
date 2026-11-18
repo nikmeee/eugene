@@ -1,6 +1,6 @@
 [project]
 name = "eugene-crab"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Юджин — краб, который выясняет, почему не работает интернет: Wi-Fi, роутер, провайдер, VPN, DNS и блокировки — в одном стильном отчёте в терминале"
 readme = "README.md"
 license = "MIT"
@@ -25,6 +25,9 @@ eugene = "eugene.app:cli"
 [build-system]
 requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/eugene/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/eugene"]
