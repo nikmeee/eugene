@@ -39,7 +39,7 @@ class AppTests(unittest.TestCase):
                 return self.report
 
         stderr = io.StringIO()
-        with patch.object(sys, "argv", ["eugene"]), \
+        with patch.object(sys, "argv", ["eugene", "--lang", "en"]), \
                 patch.object(app, "Doctor", BrokenDoctor), \
                 patch.object(app, "Live", _SilentLive), \
                 contextlib.redirect_stderr(stderr):

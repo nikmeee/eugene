@@ -14,6 +14,7 @@ _CAPS = {"link": 0, "router": 10, "isp": 10, "dns": 25, "vpn": 30}
 
 from dataclasses import dataclass, field
 
+from .i18n import tr_error
 from .probes import total_ms
 
 
@@ -92,7 +93,7 @@ def to_json(rep):
             return None
         return {
             "ok": not r["error"],
-            "error": r["error"],
+            "error": tr_error(r["error"]),
             "stage": r["stage"],
             "status": r["status"],
             "ms": round(total_ms(r), 1),

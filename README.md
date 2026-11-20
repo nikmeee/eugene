@@ -69,6 +69,7 @@ uvx --from git+https://github.com/nikmeee/eugene eugene
 | `-q`, `--quick` | faster check, fewer pings |
 | `-s`, `--site DOMAIN` | check an extra site (repeatable) |
 | `--json` | print JSON for scripts and monitoring |
+| `--lang ru` or `--lang en` | language; Russian when that is the system language, otherwise English |
 | `-V`, `--version` | show the version |
 
 ```bash

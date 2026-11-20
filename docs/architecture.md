@@ -7,6 +7,14 @@ Eugene is split into four layers:
 - `probes.py` — system commands and low-level DNS, TCP, TLS, and HTTP checks;
 - `report.py` — the result model, the score, and JSON serialization.
 
+## Language
+
+`i18n.py` holds the English and Russian text. On macOS the choice comes from the
+first entry of `AppleLanguages`, because a terminal often runs in English while
+the Mac itself is Russian. Elsewhere Eugene uses `LC_ALL`, `LC_MESSAGES`, or
+`LANG`. `--lang ru` or `--lang en` overrides that choice before the report is built.
+Probe errors stay in stable English internally and are translated only when shown.
+
 ## Execution and state
 
 In interactive mode, `Doctor.run()` works on a background thread. The main thread

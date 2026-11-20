@@ -5,6 +5,13 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-11-20
+
+### Added
+
+- The report follows the system language: Russian when that is the first language, otherwise English.
+- `--lang ru` or `--lang en` overrides the detection.
+
 ## [0.3.0] — 2026-11-20
 
 ### Changed
@@ -51,7 +58,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 - The first network doctor: Wi-Fi, router, ISP, VPN, DNS, and site-reachability checks.
 
-[Unreleased]: https://github.com/nikmeee/eugene/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/nikmeee/eugene/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/nikmeee/eugene/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nikmeee/eugene/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/nikmeee/eugene/compare/7b6502c...v0.2.2
 [0.2.1]: https://github.com/nikmeee/eugene/compare/11c120e...7b6502c
