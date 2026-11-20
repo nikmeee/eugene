@@ -1,45 +1,45 @@
-# Архитектура Eugene
+# Eugene architecture
 
-Eugene разделён на четыре слоя:
+Eugene is split into four layers:
 
-- `app.py` — аргументы командной строки, live-интерфейс Rich и финальный отчёт;
-- `doctor.py` — порядок проверок, потокобезопасный `Report` и диагностические выводы;
-- `probes.py` — системные команды и низкоуровневые DNS/TCP/TLS/HTTP-проверки;
-- `report.py` — модель результата, расчёт оценки и сериализация в JSON.
+- `app.py` — command-line arguments, the Rich live view, and the final report;
+- `doctor.py` — check order, the thread-safe `Report`, and diagnostic conclusions;
+- `probes.py` — system commands and low-level DNS, TCP, TLS, and HTTP checks;
+- `report.py` — the result model, the score, and JSON serialization.
 
-## Выполнение и состояние
+## Execution and state
 
-В интерактивном режиме `Doctor.run()` работает в фоновом потоке, а основной поток
-рисует только глубокие снимки `Report`. Узлы цепочки создаются в конструкторе
-`Doctor`, поэтому первый кадр всегда имеет полную структуру. Изменения составных
-данных и связанного с ними прогресса публикуются под одной блокировкой.
+In interactive mode, `Doctor.run()` works on a background thread. The main thread
+draws only deep copies of `Report`. The chain nodes are created in the `Doctor`
+constructor, so the first frame always has the full structure. Changes to composite
+data and the progress that depends on them are published under one lock.
 
-Необработанная ошибка фоновой диагностики возвращается в основной поток,
-печатается в `stderr` и завершает программу с кодом `2`.
+An unhandled diagnosis error returns to the main thread, is printed to `stderr`,
+and exits with code `2`.
 
-## Прямая проверка мимо VPN
+## Direct checks around the VPN
 
-На macOS сокеты привязываются к физическому интерфейсу через `IP_BOUND_IF`.
-Адрес домена запрашивается у нескольких публичных DNS-серверов. Eugene удаляет
-дубликаты и пробует до трёх A-адресов, чтобы сбой отдельного CDN-узла не выглядел
-как блокировка всего сайта. Если все адреса недоступны, для диагноза выбирается
-попытка, прошедшая дальше всего по цепочке DNS → TCP → TLS → HTTP.
+On macOS, sockets are bound to the physical interface with `IP_BOUND_IF`.
+A domain's address is requested from several public DNS servers. Eugene removes
+duplicates and tries up to three A records, so one bad CDN node does not look
+like the whole site is blocked. If every address fails, the diagnosis keeps the
+attempt that got furthest along DNS → TCP → TLS → HTTP.
 
-## Коды завершения
+## Exit codes
 
-- `0` — диагностика завершена, оценка сети не ниже 60;
-- `1` — оценка ниже 60 или сеть невозможно оценить;
-- `2` — внутренняя ошибка диагностики;
-- `130` — пользователь прервал выполнение.
+- `0` — the diagnosis finished and the network score is at least 60;
+- `1` — the score is below 60, or the network cannot be scored;
+- `2` — an internal diagnosis error;
+- `130` — the user interrupted the run.
 
-JSON пишется только в `stdout`; сообщения об ошибках отправляются в `stderr`.
+JSON is written only to `stdout`. Error messages go to `stderr`.
 
-## Тесты
+## Tests
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-Unit-тесты покрывают DNS-парсер, оценку, JSON, переходы диагностического
-конвейера, начальный кадр TUI, передачу ошибок фонового потока, перебор IP-адресов
-и атомарную публикацию прогресса.
+The unit tests cover the DNS parser, scoring, JSON, diagnosis-pipeline transitions,
+the initial TUI frame, background-error propagation, IP fallback, and atomic
+progress publication.

@@ -1,7 +1,7 @@
 [project]
 name = "eugene-crab"
 dynamic = ["version"]
-description = "Юджин — краб, который выясняет, почему не работает интернет: Wi-Fi, роутер, провайдер, VPN, DNS и блокировки — в одном стильном отчёте в терминале"
+description = "Eugene the crab finds out why the internet is down: Wi-Fi, router, ISP, VPN, DNS, and blocks in one terminal report"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

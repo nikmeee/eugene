@@ -27,7 +27,7 @@ class DirectProbeTests(unittest.TestCase):
 
     def test_direct_probe_tries_next_address(self):
         attempts = [
-            _result("1.1.1.1", "tcp", "таймаут TCP"),
+            _result("1.1.1.1", "tcp", "TCP timeout"),
             _result("2.2.2.2"),
         ]
         doc = Doctor()

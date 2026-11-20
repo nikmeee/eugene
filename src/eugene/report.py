@@ -1,14 +1,14 @@
-"""Снимок диагностики: из него рисуется экран и собирается JSON.
+"""The diagnosis snapshot. The screen is drawn from it, and JSON is built from it.
 
-Уровни узлов — общий словарь доктора и оценки. Менять строку здесь,
-а не в двух файлах сразу.
+Node levels are shared by the doctor and the score. Change the string here,
+not in two files at once.
 """
 
 from __future__ import annotations
 
 PENDING, ACTIVE, OK, WARN, FAIL, SKIP = "pending", "active", "ok", "warn", "fail", "skip"
 
-# Сколько баллов снимает замечание и потолок, если узел цепочки совсем мёртв.
+# Points removed for a finding, and the cap when a chain node is fully dead.
 _PENALTY = {FAIL: 22, WARN: 7}
 _CAPS = {"link": 0, "router": 10, "isp": 10, "dns": 25, "vpn": 30}
 
@@ -53,10 +53,10 @@ class Report:
 
 
 def score_network(findings, nodes, router_ping=None, captive=False, no_access=None):
-    """Здоровье сети 0–100. None — если программе запрещён доступ в сеть.
+    """Network health from 0 to 100. None when the program is denied network access.
 
-    Сначала штрафы за замечания, потом потолок по мёртвому звену цепочки:
-    без интернета оценка не может остаться «почти здоровой» из-за пары WARN.
+    Findings apply penalties first, then a dead link in the chain caps the score.
+    Without internet, a couple of warnings cannot leave the result looking almost healthy.
     """
     if no_access:
         return None
@@ -77,7 +77,7 @@ def score_network(findings, nodes, router_ping=None, captive=False, no_access=No
 def reason_of(r):
     if r["stage"] == "dns":
         return "dns"
-    if r["error"] == "чужой сертификат":
+    if r["error"] == "untrusted certificate":
         return "cert"
     if r["stage"] == "tls" or r["stage"] == "http":
         return "dpi"

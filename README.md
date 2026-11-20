@@ -1,100 +1,100 @@
-# 🦀 Eugene
+# Eugene
 
-**Юджин — краб, который выясняет, почему не работает интернет.**
+**Eugene is the crab that finds out why the internet is down.**
 
-> «Юджин, что с интернетом?» — и через 15 секунд у вас готовый диагноз.
+> "Eugene, what's wrong with the internet?" — and about 15 seconds later you have a diagnosis.
 
-Одна команда — и Юджин по цепочке проверяет весь путь от вашего Mac до любимых сайтов:
-Wi-Fi → роутер → провайдер → VPN → DNS → сайты. А потом объясняет человеческим языком,
-где именно сломалось и что с этим делать.
+One command, and Eugene checks the whole path from your Mac to the sites you actually use:
+Wi-Fi → router → ISP → VPN → DNS → sites. Then it explains, in plain language,
+exactly where it broke and what to do about it.
 
-![Итоговый отчёт](docs/report.svg)
+![Final report](docs/report.svg)
 
-## Что умеет
+## What it checks
 
-- **Wi-Fi** — уровень сигнала, шум и SNR, диапазон, канал, стандарт, скорость соединения.
-- **Роутер** — задержка, джиттер, потери пакетов; узнаёт производителя (Keenetic, MikroTik, ASUS, TP-Link…).
-- **Провайдер** — пинг до Cloudflare, Google и Яндекса в обход VPN, внешний IP и название провайдера.
-- **VPN** — понимает, что трафик идёт через туннель, узнаёт приложение (Shadowrocket, Amnezia, Hiddify,
-  v2RayTun, Happ, WireGuard, Outline и др.), показывает страну выхода и честную задержку через туннель.
-- **DNS** — скорость системного DNS и публичных серверов, распознаёт fake-ip режим VPN (`198.18.x.x`)
-  и ловит провайдера, который подменяет ответы публичных DNS.
-- **Сайты** — YouTube, Telegram, WhatsApp, Instagram, ChatGPT, Claude, GitHub, Discord, Google, Яндекс:
-  поэтапно DNS → TCP → TLS → ответ, **через VPN и напрямую одновременно**.
-  По этапу, на котором оборвалось соединение, видно, что это: DNS-блок, блок по IP или DPI.
-- **Captive-портал** — замечает сети с авторизацией через браузер (кафе, отели, метро).
-- **Диагноз** — оценка «здоровья сети» от 0 до 100 и конкретные советы.
+- **Wi-Fi** — signal, noise and SNR, band, channel, standard, and link rate.
+- **Router** — latency, jitter, and packet loss. It recognizes Keenetic, MikroTik, ASUS, TP-Link, and others.
+- **ISP** — pings to Cloudflare, Google, and Yandex that bypass the VPN, plus the public IP and ISP name.
+- **VPN** — sees that traffic goes through a tunnel, recognizes the app (Shadowrocket, Amnezia, Hiddify,
+  v2RayTun, Happ, WireGuard, Outline, and others), and shows the exit country and honest tunnel latency.
+- **DNS** — speed of the system DNS and public resolvers. It recognizes VPN fake-ip mode (`198.18.x.x`)
+  and catches an ISP that rewrites public DNS answers.
+- **Sites** — YouTube, Telegram, WhatsApp, Instagram, ChatGPT, Claude, GitHub, Discord, Google, and Yandex,
+  staged as DNS → TCP → TLS → response, **through the VPN and directly at the same time**.
+  The stage where the connection dies shows whether it is a DNS block, an IP block, or DPI.
+- **Captive portal** — notices networks that require a browser sign-in, such as cafes, hotels, and transit.
+- **Diagnosis** — a network-health score from 0 to 100, with specific advice.
 
-Пока идёт проверка, Юджин бегает по цепочке и комментирует происходящее:
+While the check runs, Eugene walks the chain and comments on what it finds:
 
-![Во время проверки](docs/live.svg)
+![During the check](docs/live.svg)
 
-А если всё совсем плохо — честно грустит и подсказывает, куда звонить:
+When things are genuinely bad, it says so and points to the next call:
 
-![Нет интернета](docs/offline.svg)
+![No internet](docs/offline.svg)
 
-## Как это работает
+## How it works
 
-Главный трюк — на macOS сокет можно привязать к физическому интерфейсу (`IP_BOUND_IF`).
-Тогда запрос идёт **мимо VPN-туннеля**, и Юджин сравнивает две дороги к каждому сайту:
-через VPN и напрямую через провайдера. Пинги до интернета тоже идут в обход туннеля —
-TUN-клиенты часто отвечают на ICMP сами, и обычный `ping` показывает фантастические 0.4 мс.
+The key trick on macOS is binding a socket to the physical interface (`IP_BOUND_IF`).
+The request then goes **around the VPN tunnel**, and Eugene compares two roads to every site:
+through the VPN and directly through the ISP. Internet pings also bypass the tunnel.
+TUN clients often answer ICMP themselves, so an ordinary `ping` can show a fantasy 0.4 ms.
 
-Никаких прав администратора не нужно.
+No administrator rights are required.
 
-## Установка
+## Install
 
-Нужен [uv](https://docs.astral.sh/uv/) и Python 3.9+.
+You need [uv](https://docs.astral.sh/uv/) and Python 3.9+.
 
 ```bash
 uv tool install git+https://github.com/nikmeee/eugene
 ```
 
-Запуск:
+Run it:
 
 ```bash
 eugene
 ```
 
-Без установки:
+Without installing:
 
 ```bash
 uvx --from git+https://github.com/nikmeee/eugene eugene
 ```
 
-## Опции
+## Options
 
-| Флаг | Что делает |
+| Flag | What it does |
 | --- | --- |
-| `-q`, `--quick` | быстрая проверка, меньше пингов |
-| `-s`, `--site ДОМЕН` | проверить ещё сайт (можно указать несколько раз) |
-| `--json` | результат в JSON — удобно для скриптов и мониторинга |
-| `-V`, `--version` | версия |
+| `-q`, `--quick` | faster check, fewer pings |
+| `-s`, `--site DOMAIN` | check an extra site (repeatable) |
+| `--json` | print JSON for scripts and monitoring |
+| `-V`, `--version` | show the version |
 
 ```bash
 eugene -s kinopoisk.ru -s twitch.tv
 eugene --json | jq '.sites.YouTube'
 ```
 
-Код выхода `1`, если здоровье сети ниже 60 или её нельзя оценить; `2` означает
-внутреннюю ошибку диагностики. Это можно использовать в скриптах и мониторинге.
+Exit code `1` means network health is below 60, or it could not be scored. Exit code `2`
+means the diagnosis itself failed. Both are meant for scripts and monitoring.
 
-## Платформы
+## Platforms
 
-Сделано для **macOS**. На Linux основные проверки работают, но без данных о Wi-Fi
-и без сравнения «через VPN / напрямую».
+Built for **macOS**. On Linux the main checks work, but without Wi-Fi details
+and without the "via VPN / direct" comparison.
 
-## Для разработчиков
+## For developers
 
-Устройство диагностического конвейера, модель потоков и коды завершения описаны
-в [документе об архитектуре](docs/architecture.md). История релизов ведётся
-в [CHANGELOG.md](CHANGELOG.md).
+The diagnosis pipeline, threading model, and exit codes are described in
+[the architecture document](docs/architecture.md). Releases are recorded in
+[CHANGELOG.md](CHANGELOG.md).
 
-## История
+## History
 
-До версии 0.2 проект назывался `netdoctor`, а краба звали Клешнёй. Старые ссылки на репозиторий
-перенаправляются сюда автоматически.
+Before 0.2 the project was called `netdoctor` and the crab was Klyeshnya. Old repository
+links redirect here automatically.
 
-## Лицензия
+## License
 
 [MIT](LICENSE)

@@ -26,8 +26,8 @@ class PipelineTests(unittest.TestCase):
         self.assertNotIn("sites", called)
         self.assertNotIn("vpn", called)
         self.assertEqual(doc.report.nodes["sites"]["status"], SKIP)
-        self.assertEqual(doc.report.nodes["sites"]["value"], "пропуск")
-        self.assertEqual(doc.report.nodes["vpn"]["value"], "нет канала")
+        self.assertEqual(doc.report.nodes["sites"]["value"], "skipped")
+        self.assertEqual(doc.report.nodes["vpn"]["value"], "no link")
 
     def test_live_isp_still_checks_vpn(self):
         doc = Doctor()

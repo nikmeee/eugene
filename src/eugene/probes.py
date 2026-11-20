@@ -1,8 +1,8 @@
-"""Низкоуровневые сетевые проверки: маршруты, Wi-Fi, ping, DNS, HTTPS.
+"""Low-level network checks: routes, Wi-Fi, ping, DNS, and HTTPS.
 
-Ключевая хитрость: на macOS сокет можно привязать к физическому интерфейсу
-(IP_BOUND_IF), и тогда трафик идёт мимо VPN-туннеля. Так мы сравниваем
-«через VPN» и «напрямую».
+The key trick on macOS is binding a socket to the physical interface
+(IP_BOUND_IF), so traffic bypasses the VPN tunnel. That is how Eugene
+compares "via VPN" with "direct".
 """
 
 import ipaddress
@@ -20,7 +20,7 @@ import time
 IS_MAC = sys.platform == "darwin"
 IP_BOUND_IF = 25  # macOS <netinet/in.h>
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) eugene"
-FAKE_IP_NET = ipaddress.ip_network("198.18.0.0/15")  # fake-ip DNS у Clash / sing-box / Shadowrocket
+FAKE_IP_NET = ipaddress.ip_network("198.18.0.0/15")  # fake-ip DNS used by Clash, sing-box, and Shadowrocket
 TUNNEL_PREFIXES = ("utun", "tun", "ppp", "ipsec", "wg", "tap", "gpd")
 
 VPN_APPS = {
@@ -56,7 +56,7 @@ VPN_APPS = {
 }
 
 
-# ────────────────────────────── система ───────────────────────────────
+# ─────────────────────────────── system ───────────────────────────────
 
 
 def sh(cmd, timeout=8):
@@ -71,14 +71,14 @@ def is_tunnel(iface):
 
 
 def default_routes():
-    """[(gateway, iface)] всех маршрутов по умолчанию, в порядке приоритета."""
+    """[(gateway, iface)] for every default route, in priority order."""
     routes = []
     if IS_MAC:
         for line in sh(["netstat", "-rn", "-f", "inet"]).splitlines():
             parts = line.split()
             if len(parts) >= 4 and parts[0] == "default":
                 routes.append((parts[1], parts[3]))
-        # split-туннель 0/1 + 128.0/1 тоже считается «VPN по умолчанию»
+        # A 0/1 + 128.0/1 split tunnel also counts as the default VPN.
         for line in sh(["netstat", "-rn", "-f", "inet"]).splitlines():
             parts = line.split()
             if len(parts) >= 4 and parts[0] in ("0/1", "128.0/1") and is_tunnel(parts[3]):
@@ -137,14 +137,14 @@ def running_vpn_apps():
     for key, name in VPN_APPS.items():
         if key in procs and name not in found:
             found.append(name)
-    # приложение с активным Packet Tunnel — почти наверняка то, что держит туннель
+    # An app with an active Packet Tunnel is almost certainly the one holding the tunnel.
     tunnel = re.findall(r"/applications/([^/]+)\.app/.*packettunnel", procs)
     active = [VPN_APPS.get(t, t.title()) for t in tunnel]
     return active + [a for a in found if a not in active]
 
 
 def wifi_info():
-    """Параметры текущей Wi-Fi сети (macOS). SSID без прав геолокации скрыт системой."""
+    """Current Wi-Fi parameters on macOS. The system hides the SSID without location permission."""
     if not IS_MAC:
         return None
     try:
@@ -205,45 +205,45 @@ def bind(sock, iface):
 
 
 class DnsParseError(ValueError):
-    """Ответ DNS пришёл, но разобрать его нельзя."""
+    """A DNS reply arrived, but it cannot be parsed."""
 
 
 def _skip_name(data, i):
-    """Смещается за имя. Указатель сжатия пропускается, а не преследуется:
-    иначе петля C0 xx → тот же байт крутит разбор вечно."""
+    """Move past a name. A compression pointer is skipped, not followed:
+    otherwise a C0 xx loop spins on the same byte forever."""
     end = len(data)
     for _ in range(128):
         if i >= end:
-            raise DnsParseError("обрезанное имя")
+            raise DnsParseError("truncated name")
         n = data[i]
         if n == 0:
             return i + 1
         if n & 0xC0 == 0xC0:
             if i + 1 >= end:
-                raise DnsParseError("обрезанный указатель")
+                raise DnsParseError("truncated pointer")
             return i + 2
         if n & 0xC0:
-            raise DnsParseError("неизвестная метка")
+            raise DnsParseError("unknown label")
         if i + 1 + n > end:
-            raise DnsParseError("обрезанная метка")
+            raise DnsParseError("truncated label")
         i += n + 1
-    raise DnsParseError("слишком длинное имя")
+    raise DnsParseError("name is too long")
 
 
 def parse_dns_answers(data, tid):
-    """Разбирает ответ A-запроса с нашим id. None — пакет чужой или слишком короткий."""
+    """Parse an A-query reply with our id. None means the packet is foreign or too short."""
     if len(data) < 12:
         return None
     got, flags, qd, an, _ns, _ar = struct.unpack(">HHHHHH", data[:12])
     if got != tid:
         return None
     if qd > 8:
-        raise DnsParseError("слишком много вопросов")
+        raise DnsParseError("too many questions")
     i = 12
     for _ in range(qd):
         i = _skip_name(data, i)
         if i + 4 > len(data):
-            raise DnsParseError("обрезанный вопрос")
+            raise DnsParseError("truncated question")
         i += 4
     ips = []
     for _ in range(min(an, 32)):
@@ -251,11 +251,11 @@ def parse_dns_answers(data, tid):
             break
         i = _skip_name(data, i)
         if i + 10 > len(data):
-            raise DnsParseError("обрезанный ответ")
+            raise DnsParseError("truncated answer")
         typ, _cls, _ttl, ln = struct.unpack(">HHIH", data[i : i + 10])
         i += 10
         if i + ln > len(data):
-            raise DnsParseError("обрезанные данные")
+            raise DnsParseError("truncated data")
         if typ == 1 and ln == 4:
             ips.append(socket.inet_ntoa(data[i : i + 4]))
         i += ln
@@ -263,7 +263,7 @@ def parse_dns_answers(data, tid):
 
 
 def dns_query(server, name, iface=None, timeout=2.0):
-    """Прямой DNS-запрос (A) к серверу, опционально мимо VPN. → {ms, rcode, ips, error}"""
+    """A direct DNS A query, optionally bypassing the VPN. Returns {ms, rcode, ips, error}."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         bind(s, iface)
@@ -279,13 +279,13 @@ def dns_query(server, name, iface=None, timeout=2.0):
             try:
                 parsed = parse_dns_answers(data, tid)
             except DnsParseError:
-                return {"ms": None, "rcode": None, "ips": [], "error": "битый ответ DNS"}
+                return {"ms": None, "rcode": None, "ips": [], "error": "malformed DNS reply"}
             if parsed is None:
                 continue
             ms = (time.perf_counter() - t0) * 1000
             return {"ms": ms, "rcode": parsed["rcode"], "ips": parsed["ips"], "error": None}
     except socket.timeout:
-        return {"ms": None, "rcode": None, "ips": [], "error": "таймаут"}
+        return {"ms": None, "rcode": None, "ips": [], "error": "timeout"}
     except Exception as e:
         return {"ms": None, "rcode": None, "ips": [], "error": str(e)}
     finally:
@@ -317,22 +317,22 @@ def ip_kind(ip):
 
 
 def http_probe(host, ip=None, iface=None, timeout=6.0, path="/", body_limit=0):
-    """Поэтапный HTTPS-запрос: DNS → TCP → TLS → первый байт ответа.
+    """Staged HTTPS request: DNS → TCP → TLS → first response byte.
 
-    Возвращает тайминги каждого этапа (мс), HTTP-статус и, при ошибке,
-    этап, на котором всё сломалось, — по нему видно, DNS это, блок IP или DPI.
+    Returns each stage's timing in milliseconds, the HTTP status, and, on
+    failure, the stage where it broke. That distinguishes DNS, IP, and DPI blocks.
     """
     r = {"host": host, "ip": ip, "dns": None, "tcp": None, "tls": None, "http": None,
          "status": None, "stage": None, "error": None, "body": b""}
     if ip is None:
         res = resolve_system(host)
         if not res["ips"]:
-            r.update(stage="dns", error="домен не резолвится")
+            r.update(stage="dns", error="domain does not resolve")
             return r
         r["dns"], ip = res["ms"], res["ips"][0]
         r["ip"] = ip
     if ip_kind(ip) == "bogus":
-        r.update(stage="dns", error="DNS вернул подменный адрес %s" % ip)
+        r.update(stage="dns", error="DNS returned a spoofed address %s" % ip)
         return r
 
     stage = "tcp"
@@ -358,7 +358,7 @@ def http_probe(host, ip=None, iface=None, timeout=6.0, path="/", body_limit=0):
         first = s.recv(4096)
         r["http"] = (time.perf_counter() - t) * 1000
         if not first:
-            raise ConnectionResetError("пустой ответ")
+            raise ConnectionResetError("empty response")
         m = re.match(rb"HTTP/\d(?:\.\d)? (\d{3})", first)
         r["status"] = int(m.group(1)) if m else None
         if body_limit:
@@ -370,13 +370,13 @@ def http_probe(host, ip=None, iface=None, timeout=6.0, path="/", body_limit=0):
                 buf += chunk
             r["body"] = buf
     except socket.timeout:
-        r.update(stage=stage, error={"tcp": "таймаут TCP", "tls": "таймаут TLS", "http": "нет ответа"}[stage])
+        r.update(stage=stage, error={"tcp": "TCP timeout", "tls": "TLS timeout", "http": "no response"}[stage])
     except ssl.SSLCertVerificationError:
-        r.update(stage=stage, error="чужой сертификат")
+        r.update(stage=stage, error="untrusted certificate")
     except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, ssl.SSLEOFError, ssl.SSLZeroReturnError):
-        r.update(stage=stage, error={"tcp": "сброс TCP", "tls": "обрыв TLS", "http": "обрыв ответа"}[stage])
+        r.update(stage=stage, error={"tcp": "TCP reset", "tls": "TLS dropped", "http": "response dropped"}[stage])
     except ConnectionRefusedError:
-        r.update(stage=stage, error="соединение отклонено")
+        r.update(stage=stage, error="connection refused")
     except OSError as e:
         r.update(stage=stage, error=(e.strerror or str(e))[:40])
     finally:
@@ -416,8 +416,8 @@ def cf_meta(iface=None, ip=None):
 
 
 def http_rtt(host="speed.cloudflare.com", n=6):
-    """Честная задержка до Cloudflare по HTTP поверх уже открытого соединения
-    (работает и через VPN-туннель, где ICMP-ping врёт)."""
+    """Honest latency to Cloudflare over HTTP on an already open connection.
+    This also works through a VPN tunnel, where ICMP ping lies."""
     import http.client
 
     try:
@@ -432,7 +432,7 @@ def http_rtt(host="speed.cloudflare.com", n=6):
             m = re.search(r"dur=([\d.]+)", resp.getheader("Server-Timing") or "")
             if m:
                 rtt -= float(m.group(1))
-            if i:  # первый — прогрев
+            if i:  # The first sample is a warmup.
                 times.append(max(rtt, 0.1))
         conn.close()
         return statistics.median(times)
@@ -441,7 +441,7 @@ def http_rtt(host="speed.cloudflare.com", n=6):
 
 
 def captive_portal(iface=None):
-    """True — если сеть перехватывает HTTP (страница авторизации в кафе/отеле)."""
+    """True when the network intercepts HTTP, as with a cafe or hotel sign-in page."""
     s = socket.socket()
     try:
         bind(s, iface)
@@ -471,12 +471,12 @@ def captive_portal(iface=None):
 
 
 def network_blocked(gw, iface=None):
-    """Проверяет, разрешено ли этой программе вообще открывать сетевые соединения.
+    """Check whether this program is allowed to open network connections at all.
 
-    В песочницах и под фаерволами (Little Snitch, LuLu, MDM-профили) сокет
-    отклоняется сразу, ещё до отправки пакета: EBADF / EPERM / EACCES.
-    Отказ или таймаут от самого роутера — это нормально: значит, сеть доступна.
-    Возвращает текст ошибки, если доступа нет, иначе None.
+    In sandboxes and under firewalls (Little Snitch, LuLu, MDM profiles) the
+    socket is rejected immediately, before a packet is sent: EBADF / EPERM / EACCES.
+    A refusal or timeout from the router itself is fine: the network is reachable.
+    Returns the error text when access is denied, otherwise None.
     """
     import errno
 

@@ -1,4 +1,4 @@
-"""🦀 Eugene — краб, который выясняет, почему не работает интернет."""
+"""Eugene — the crab that finds out why the internet is down."""
 
 import argparse
 import json
@@ -30,7 +30,7 @@ SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 BLOCKS = "▁▂▃▄▅▆▇█"
 PHASES = {"dns": "#b388ff", "tcp": "#3d7bff", "tls": SEA, "http": "#3ddc97"}
 
-# ───────────────────────────── мелочи ──────────────────────────────
+# ───────────────────────────── details ─────────────────────────────
 
 
 def _rgb(h):
@@ -66,7 +66,7 @@ def icon(level):
 def ms(v):
     if v is None:
         return "—"
-    return "%.1f мс" % v if v < 10 else "%.0f мс" % v
+    return "%.1f ms" % v if v < 10 else "%.0f ms" % v
 
 
 def mask_ip(ip):
@@ -120,13 +120,13 @@ def score_stops(score):
     return ["#ff5c7a", "#ff8a3d"]
 
 
-# ───────────────────────────── блоки ───────────────────────────────
+# ───────────────────────────── blocks ──────────────────────────────
 
 
 def header():
     t = Text(" ")
     t.append_text(gradient_text("E U G E N E", TITLE))
-    t.append("   сетевой доктор", style=DIM)
+    t.append("   network doctor", style=DIM)
     t.append("  v%s" % __version__, style=FAINT)
     return t
 
@@ -165,7 +165,7 @@ def chain(doc, width):
     t = time.time()
     for i in range(n):
         st = nodes[i]["status"]
-        # кусок рельса до узла
+        # Rail segment leading to this node.
         start = 0 if i == 0 else centers[i - 1] + 1
         seg_len = centers[i] - start
         if i > 0:
@@ -207,14 +207,14 @@ def live_view(doc, console):
     width = min(console.width, 100)
     inner = width - 4
     elapsed = time.perf_counter() - doc.started
-    lines = [(doc.phrase, "bold"), ("", None), ("%.1f с · проверено узлов: %d из %d" % (
+    lines = [(doc.phrase, "bold"), ("", None), ("%.1f s · nodes checked: %d of %d" % (
         elapsed, sum(1 for k in doc.node_order if doc.nodes[k]["status"] in (OK, WARN, FAIL)), len(doc.node_order)), DIM)]
     log_n = max(3, min(8, console.height - 21))
     parts = [header(), Text(""), crab_scene(doc, lines), Text(""), chain(doc, inner), Text(""), event_log(doc, log_n)]
     return Panel(Group(*parts), box=box.HEAVY, border_style=FAINT, width=width, padding=(0, 1))
 
 
-# ─────────────────────────── итоговый отчёт ────────────────────────
+# ──────────────────────────── final report ─────────────────────────
 
 
 def kv(rows):
@@ -238,42 +238,42 @@ def signal_bars(sig):
 def pretty_channel(ch):
     if not ch:
         return "?"
-    return ch.replace("GHz", " ГГц").replace("MHz", " МГц").replace("(", "· ").replace(")", "").replace(",", " ·")
+    return ch.replace("(", "· ").replace(")", "").replace(",", " ·")
 
 
 def ping_cell(r):
     if not r or not r["recv"]:
-        return Text("не отвечает", style=COLORS[FAIL])
+        return Text("no reply", style=COLORS[FAIL])
     lvl = OK if r["loss"] == 0 and r["avg"] < 40 else WARN if r["loss"] < 20 else FAIL
     t = Text(ms(r["avg"]).rjust(7), style="bold " + COLORS[lvl])
     t.append("  ")
     t.append_text(sparkline(r["times"], 10, COLORS[lvl]))
-    t.append("  потери %.0f%%" % r["loss"], style=DIM if r["loss"] == 0 else COLORS[WARN])
+    t.append("  loss %.0f%%" % r["loss"], style=DIM if r["loss"] == 0 else COLORS[WARN])
     return t
 
 
 def local_block(doc):
-    rows = [("Интерфейс", "%s (%s) · %s" % (doc.port_name, doc.phys, doc.local_ip or "?"))]
+    rows = [("Interface", "%s (%s) · %s" % (doc.port_name, doc.phys, doc.local_ip or "?"))]
     w = doc.wifi
     if w and w.get("signal") is not None:
         s = signal_bars(w["signal"])
         s.append("  %d dBm" % w["signal"], style="bold")
         if w.get("noise") is not None:
             s.append(" · SNR %d dB" % (w["signal"] - w["noise"]), style=DIM)
-        rows.append(("Сигнал", s))
+        rows.append(("Signal", s))
         if w.get("ssid"):
-            rows.append(("Сеть", w["ssid"]))
-        rows.append(("Канал", pretty_channel(w.get("channel"))))
+            rows.append(("Network", w["ssid"]))
+        rows.append(("Channel", pretty_channel(w.get("channel"))))
         std = Text(w.get("phy") or "?")
         if w.get("rate"):
-            std.append(" · %s Мбит/с" % w["rate"], style=DIM)
+            std.append(" · %s Mbps" % w["rate"], style=DIM)
         if w.get("security"):
             std.append(" · %s" % w["security"].split("_")[0].upper(), style=DIM)
-        rows.append(("Стандарт", std))
+        rows.append(("Standard", std))
     if doc.gw:
-        rows.append(("Роутер", "%s · %s" % (doc.router_brand, doc.gw) if doc.router_brand else doc.gw))
+        rows.append(("Router", "%s · %s" % (doc.router_brand, doc.gw) if doc.router_brand else doc.gw))
     if doc.router_ping:
-        rows.append(("До роутера", ping_cell(doc.router_ping)))
+        rows.append(("To router", ping_cell(doc.router_ping)))
     return kv(rows)
 
 
@@ -281,8 +281,8 @@ def internet_block(doc):
     rows = []
     m = doc.meta_direct or {}
     if m:
-        rows.append(("Провайдер", "%s (AS%s)" % (short_org(m.get("asOrganization")) or "?", m.get("asn", "?"))))
-        rows.append(("Внешний IP", "%s · %s, %s" % (mask_ip(m.get("clientIp")), m.get("city", "?"), m.get("country", "?"))))
+        rows.append(("ISP", "%s (AS%s)" % (short_org(m.get("asOrganization")) or "?", m.get("asn", "?"))))
+        rows.append(("Public IP", "%s · %s, %s" % (mask_ip(m.get("clientIp")), m.get("city", "?"), m.get("country", "?"))))
     if doc.vpn:
         v = doc.meta_vpn or {}
         t = Text(doc.vpn_apps[0] if doc.vpn_apps else doc.vpn_iface, style="bold " + SEA)
@@ -291,12 +291,12 @@ def internet_block(doc):
             t.append(" · %s" % (short_org(v.get("asOrganization")) or "?"), style=DIM)
         rows.append(("VPN", t))
         if doc.vpn_rtt:
-            rows.append(("Через VPN", Text(ms(doc.vpn_rtt).rjust(7), style="bold " + (COLORS[OK] if doc.vpn_rtt < 150 else COLORS[WARN]))))
+            rows.append(("Via VPN", Text(ms(doc.vpn_rtt).rjust(7), style="bold " + (COLORS[OK] if doc.vpn_rtt < 150 else COLORS[WARN]))))
     for name, r in doc.isp_pings:
         rows.append(("%s" % r["host"], ping_cell(r)))
-    rows.append(("IPv6", Text("есть", style=COLORS[OK]) if doc.ipv6 else Text("нет", style=DIM)))
+    rows.append(("IPv6", Text("yes", style=COLORS[OK]) if doc.ipv6 else Text("no", style=DIM)))
     if doc.captive is not None:
-        rows.append(("Вход в сеть", Text("нужна авторизация!", style=COLORS[FAIL]) if doc.captive else Text("не нужен", style=DIM)))
+        rows.append(("Sign-in", Text("authorization required!", style=COLORS[FAIL]) if doc.captive else Text("not required", style=DIM)))
     return kv(rows)
 
 
@@ -304,7 +304,7 @@ def dns_cell(d, sensitive=False):
     if d["error"]:
         return Text(d["error"], style=COLORS[FAIL])
     if not d["ips"]:
-        word = "NXDOMAIN" if d["rcode"] == 3 else "пусто"
+        word = "NXDOMAIN" if d["rcode"] == 3 else "empty"
         return Text("%s · %s" % (word, ms(d["ms"])), style=COLORS[WARN])
     lvl = OK if d["ms"] < 80 else WARN
     return Text(ms(d["ms"]), style=COLORS[lvl])
@@ -312,20 +312,20 @@ def dns_cell(d, sensitive=False):
 
 def dns_block(doc):
     t = Table(box=box.SIMPLE_HEAD, header_style=DIM, padding=(0, 2), show_edge=False)
-    t.add_column("Сервер")
+    t.add_column("Server")
     t.add_column("example.com")
     t.add_column("youtube.com")
     for name, srv, ctrl, sens in doc.dns_table:
         t.add_row(Text(name) + Text("  " + srv, style=DIM), dns_cell(ctrl), dns_cell(sens, True))
-    sysline = Text("  Системный DNS: ", style=DIM)
+    sysline = Text("  System DNS: ", style=DIM)
     sysline.append(doc.sys_dns or "?", style="bold")
     fake = any(p.ip_kind(ip) == "fake" for r in doc.sys_resolve for ip in r["ips"])
     if fake:
-        sysline.append("  — fake-ip от VPN: имена резолвит сам туннель", style=DIM)
+        sysline.append("  — VPN fake-ip: the tunnel resolves names itself", style=DIM)
     elif doc.sys_resolve:
         oks = [r["ms"] for r in doc.sys_resolve if r["ms"]]
         if oks:
-            sysline.append("  · %s в среднем" % ms(sum(oks) / len(oks)), style=DIM)
+            sysline.append("  · %s on average" % ms(sum(oks) / len(oks)), style=DIM)
     return Group(sysline, t)
 
 
@@ -364,10 +364,10 @@ def site_cell(r):
 
 def sites_block(doc):
     t = Table(box=box.SIMPLE_HEAD, header_style=DIM, padding=(0, 2), show_edge=False)
-    t.add_column("Сайт", no_wrap=True)
+    t.add_column("Site", no_wrap=True)
     if doc.vpn:
-        t.add_column("через VPN", no_wrap=True)
-    t.add_column("напрямую" if doc.vpn else "доступ", no_wrap=True)
+        t.add_column("via VPN", no_wrap=True)
+    t.add_column("direct" if doc.vpn else "access", no_wrap=True)
     for name, host, via, direct in doc.site_results:
         eff = via if doc.vpn else direct
         mark = Text("✔ " if not eff["error"] else "✖ ", style=COLORS[OK] if not eff["error"] else COLORS[FAIL])
@@ -378,7 +378,7 @@ def sites_block(doc):
         row.append(site_cell(direct))
         t.add_row(*row)
     legend = Text("  ")
-    for k, label in (("dns", "DNS"), ("tcp", "TCP"), ("tls", "TLS"), ("http", "ответ")):
+    for k, label in (("dns", "DNS"), ("tcp", "TCP"), ("tls", "TLS"), ("http", "response")):
         legend.append("▬ ", style=PHASES[k])
         legend.append(label + "   ", style=DIM)
     return Group(t, legend)
@@ -391,7 +391,7 @@ def findings_block(doc):
     t.add_column(ratio=1)
     if not items:
         t.add_row(Text(" ✔", style=COLORS[OK]),
-                  Text("Проблем не нашёл. Если что-то тормозит — дело, скорее всего, в самом сайте или приложении."))
+                  Text("No problems found. If something is still slow, it is probably the site or the app."))
         return t
     for lvl, title, tip in items:
         body = Text()
@@ -408,12 +408,12 @@ def section(title):
 def final_view(doc, console):
     width = min(console.width, 100)
     st = score_stops(doc.score) if doc.score is not None else ["#7f7f7f", "#b3b3b3"]
-    sub = {"happy": "Можно спокойно сидеть в интернете 🌊", "normal": "Есть пара мелочей — смотри ниже",
-           "worried": "Кое-что не так — разбор ниже", "sad": "Дело плохо — но я подскажу, что делать"}[doc.mood]
+    sub = {"happy": "You can stay online in peace", "normal": "A couple of small things — see below",
+           "worried": "Something is off — the breakdown is below", "sad": "This is bad — but I can tell you what to do"}[doc.mood]
     score = Table.grid()
     score.add_column(justify="center")
     score.add_row(big_number(doc.score if doc.score is not None else "?", st))
-    score.add_row(Text("здоровье сети" if doc.score is not None else "не измерить", style=DIM))
+    score.add_row(Text("network health" if doc.score is not None else "not measurable", style=DIM))
     border = {"happy": COLORS[OK], "normal": SEA, "worried": COLORS[WARN], "sad": COLORS[FAIL]}[doc.mood]
     scene = crab_scene(doc, [(doc.headline, "bold"), ("", None), (sub, DIM)], extra=score, border=border)
 
@@ -422,27 +422,27 @@ def final_view(doc, console):
         cols = Table.grid(expand=True, padding=(0, 3))
         cols.add_column(ratio=1)
         cols.add_column(ratio=1)
-        cols.add_row(Group(section("ЛОКАЛЬНАЯ СЕТЬ"), local_block(doc)),
-                     Group(section("ИНТЕРНЕТ"), internet_block(doc)) if doc.isp_pings else Text(""))
+        cols.add_row(Group(section("LOCAL NETWORK"), local_block(doc)),
+                     Group(section("INTERNET"), internet_block(doc)) if doc.isp_pings else Text(""))
         parts += [Text(""), cols]
     if doc.dns_table:
         parts += [Text(""), section("DNS"), dns_block(doc)]
     if doc.site_results:
-        parts += [Text(""), section("САЙТЫ"), sites_block(doc)]
-    parts += [Text(""), section("ДИАГНОЗ"), findings_block(doc)]
+        parts += [Text(""), section("SITES"), sites_block(doc)]
+    parts += [Text(""), section("DIAGNOSIS"), findings_block(doc)]
     return Panel(Group(*parts), box=box.HEAVY, border_style=FAINT, width=width, padding=(0, 1),
-                 subtitle=Text(" проверено за %.1f с " % (time.perf_counter() - doc.started), style=FAINT))
+                 subtitle=Text(" checked in %.1f s " % (time.perf_counter() - doc.started), style=FAINT))
 
 
 # ─────────────────────────────── main ──────────────────────────────
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="eugene", description="Краб Юджин выясняет, почему не работает интернет")
+    ap = argparse.ArgumentParser(prog="eugene", description="Eugene the crab finds out why the internet is down")
     ap.add_argument("-V", "--version", action="version", version="%(prog)s " + __version__)
-    ap.add_argument("-q", "--quick", action="store_true", help="быстрая проверка (меньше пингов)")
-    ap.add_argument("-s", "--site", action="append", metavar="ДОМЕН", help="проверить ещё сайт (можно несколько раз)")
-    ap.add_argument("--json", action="store_true", help="вывести результат в JSON")
+    ap.add_argument("-q", "--quick", action="store_true", help="faster check, fewer pings")
+    ap.add_argument("-s", "--site", action="append", metavar="DOMAIN", help="check an extra site (repeatable)")
+    ap.add_argument("--json", action="store_true", help="print the result as JSON")
     args = ap.parse_args()
 
     from .doctor import SITES
@@ -473,10 +473,10 @@ def main():
             raise worker_error[0]
         console.print(final_view(doc.snapshot(), console))
     except KeyboardInterrupt:
-        Console(stderr=True).print("\n  [grey50]🦀 Юджин уполз. Прервано.[/]")
+        Console(stderr=True).print("\n  [grey50]Eugene scuttled off. Interrupted.[/]")
         return 130
     except Exception as exc:
-        Console(stderr=True).print("  [bold red]Юджин не смог закончить проверку:[/] %s" % exc)
+        Console(stderr=True).print("  [bold red]Eugene could not finish the check:[/] %s" % exc)
         return 2
     score = doc.snapshot().score
     return 0 if score is not None and score >= 60 else 1

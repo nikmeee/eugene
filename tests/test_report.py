@@ -14,7 +14,7 @@ class ScoreTests(unittest.TestCase):
         self.assertEqual(score_network([(FAIL, "a", "b"), (WARN, "c", "d")], {}), 71)
 
     def test_ok_finding_does_not_change_score(self):
-        self.assertEqual(score_network([("ok", "VPN выручает", "tip")], {}), 100)
+        self.assertEqual(score_network([("ok", "VPN saves the day", "tip")], {}), 100)
 
     def test_dead_link_caps_at_zero(self):
         nodes = {"link": {"status": FAIL}}
@@ -22,7 +22,7 @@ class ScoreTests(unittest.TestCase):
 
     def test_dead_isp_caps_below_the_finding_penalty(self):
         nodes = {"isp": {"status": FAIL}}
-        self.assertEqual(score_network([(FAIL, "нет интернета", "tip")], nodes), 10)
+        self.assertEqual(score_network([(FAIL, "no internet", "tip")], nodes), 10)
 
     def test_captive_portal_caps_at_20(self):
         self.assertEqual(score_network([], {}, captive=True), 20)
@@ -41,11 +41,11 @@ class ScoreTests(unittest.TestCase):
 class FinishTests(unittest.TestCase):
     def test_finish_uses_the_same_score(self):
         doc = Doctor()
-        doc.finding(FAIL, "Нет интернета за роутером", "Перезагрузи роутер")
-        doc.node("isp", FAIL, "нет связи")
+        doc.finding(FAIL, "No internet beyond the router", "Power-cycle the router")
+        doc.node("isp", FAIL, "no link")
         doc.finish()
         self.assertEqual(doc.report.score, 10)
-        self.assertEqual(doc.report.headline, "Нет интернета за роутером")
+        self.assertEqual(doc.report.headline, "No internet beyond the router")
         self.assertEqual(doc.report.mood, "sad")
         self.assertTrue(doc.report.done)
 
@@ -54,34 +54,34 @@ class FinishTests(unittest.TestCase):
         doc.finish()
         self.assertEqual(doc.report.score, 100)
         self.assertEqual(doc.report.mood, "happy")
-        self.assertEqual(doc.report.headline, "Сеть здорова, как краб в отпуске!")
+        self.assertEqual(doc.report.headline, "The network is healthy. This crab is on vacation!")
 
     def test_snapshot_does_not_follow_later_writes(self):
         doc = Doctor()
-        doc.finding(WARN, "слабо", "подойди")
+        doc.finding(WARN, "weak", "move closer")
         snap = doc.snapshot()
-        doc.finding(FAIL, "пропало", "перезагрузи")
+        doc.finding(FAIL, "gone", "power-cycle")
         self.assertEqual(len(snap.findings), 1)
         self.assertEqual(len(doc.report.findings), 2)
 
 
 class JsonTests(unittest.TestCase):
     def test_vpn_off_shape(self):
-        rep = Report(score=71, headline="нюансы", phys="en0", gw="192.168.1.1",
-                     findings=[(WARN, "Слабый сигнал", "Подойди ближе")], sys_dns="192.168.1.1")
+        rep = Report(score=71, headline="caveats", phys="en0", gw="192.168.1.1",
+                     findings=[(WARN, "Weak signal", "Move closer")], sys_dns="192.168.1.1")
         data = to_json(rep)
         self.assertEqual(data["score"], 71)
         self.assertEqual(data["interface"], "en0")
         self.assertEqual(data["vpn"], {"active": False})
         self.assertEqual(data["dns"], {"system": "192.168.1.1"})
-        self.assertEqual(data["findings"][0]["tip"], "Подойди ближе")
+        self.assertEqual(data["findings"][0]["tip"], "Move closer")
         self.assertIsNone(data["router_ping"])
 
     def test_site_error_carries_reason(self):
-        bad = {"error": "домен не резолвится", "stage": "dns", "status": None,
+        bad = {"error": "domain does not resolve", "stage": "dns", "status": None,
                "dns": None, "tcp": None, "tls": None, "http": None}
-        data = to_json(Report(site_results=[("Яндекс", "ya.ru", None, bad)]))
-        site = data["sites"]["Яндекс"]
+        data = to_json(Report(site_results=[("Yandex", "ya.ru", None, bad)]))
+        site = data["sites"]["Yandex"]
         self.assertIsNone(site["via_vpn"])
         self.assertFalse(site["direct"]["ok"])
         self.assertEqual(site["direct"]["reason"], "dns")

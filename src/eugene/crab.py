@@ -1,21 +1,21 @@
-"""Юджин — пиксельный краб-маскот. Рисуется полублоками ▀▄: 1 символ = 2 пикселя."""
+"""Eugene, the pixel crab mascot. Drawn with half-blocks ▀▄: 1 character = 2 pixels."""
 
 from rich.text import Text
 
 PALETTE = {
-    "R": "#ff6a4d",  # панцирь
-    "D": "#c4392b",  # тень, ножки, стебельки
-    "L": "#ffb39e",  # блик
-    "W": "#ffffff",  # белок глаза
-    "K": "#16161e",  # зрачок, рот
-    "B": "#5cc8ff",  # капля пота / слеза
-    "P": "#ff9fbd",  # румянец
+    "R": "#ff6a4d",  # shell
+    "D": "#c4392b",  # shadow, legs, eyestalks
+    "L": "#ffb39e",  # highlight
+    "W": "#ffffff",  # eye white
+    "K": "#16161e",  # pupil, mouth
+    "B": "#5cc8ff",  # sweat or tear
+    "P": "#ff9fbd",  # blush
 }
 W = 24
 
 
 def sym(left):
-    """Строка из левой половины + её зеркала."""
+    """A row made of the left half plus its mirror."""
     return left + left[::-1]
 
 
@@ -28,21 +28,21 @@ def put(row, col, s):
 
 
 BODY = [sym(x) for x in (
-    "............",  # 0  клешни
+    "............",  # 0  claws
     "............",  # 1
     "............",  # 2
     "............",  # 3
-    "...RRR.WWW..",  # 4  глаза
+    "...RRR.WWW..",  # 4  eyes
     "....R..WWW..",  # 5
-    ".....R..D...",  # 6  стебельки
-    "......DRRRRR",  # 7  панцирь
+    ".....R..D...",  # 6  eyestalks
+    "......DRRRRR",  # 7  shell
     "....RRRRRRRR",  # 8
     "...RRRRRRRRR",  # 9
     "..RRRRRRRRRR",  # 10
     "..RRRRRRRRRR",  # 11
     "...DRRRRRRRR",  # 12
     "....DDRRRRRR",  # 13
-    "...D..D..D..",  # 14 ножки
+    "...D..D..D..",  # 14 legs
     "..D..D..D...",  # 15
 )]
 
@@ -52,7 +52,7 @@ CLAWS = {
 }
 LEGS_ALT = {14: sym("..D..D..D..."), 15: sym("..D..D..D...").replace("D", ".", 0)}
 
-# глаза: строки 4-5, левый глаз в колонках 7-9 (правый — зеркально)
+# Eyes: rows 4-5, left eye in columns 7-9 (the right eye is mirrored).
 EYES = {
     "normal": ("WWW", "WKK"),
     "happy": (".K.", "K.K"),
@@ -60,7 +60,7 @@ EYES = {
     "worried": ("WWW", "KKW"),
     "sad": ("KK.", "WKW"),
 }
-# рот: {строка: (колонка, рисунок)}
+# Mouth: {row: (column, drawing)}
 MOUTHS = {
     "normal": {10: (9, "K....K"), 11: (10, "KKKK")},
     "happy": {10: (9, "K....K"), 11: (10, "KPPK")},
@@ -74,7 +74,7 @@ def crab_text(mood="normal", frame=0, blush=None):
     if mood not in EYES:
         mood = "normal"
     g = list(BODY)
-    # клешни
+    # claws
     if mood == "sad":
         for r, left in {8: "R.R.........", 9: "RRR.........", 10: ".R.........."}.items():
             g[r] = put(g[r], 0, left[:3])
@@ -88,17 +88,17 @@ def crab_text(mood="normal", frame=0, blush=None):
     else:
         for r, left in CLAWS["open" if frame % 2 == 0 else "snap"].items():
             g[r] = sym(left)
-    # ножки шевелятся
+    # The legs shift.
     if frame % 2:
         g[14], g[15] = sym("..D..D..D..."), sym("...D..D..D..")
-    # глаза
+    # eyes
     top, bot = EYES[mood]
     g[4] = put(put(g[4], 7, top), W - 10, top[::-1])
     g[5] = put(put(g[5], 7, bot), W - 10, bot[::-1])
-    # блик на панцире
+    # Highlight on the shell.
     g[9] = put(g[9], 4, "LL")
     g[10] = put(g[10], 3, "L")
-    # рот
+    # mouth
     for r, (c, s) in MOUTHS[mood].items():
         g[r] = put(g[r], c, s)
     if blush if blush is not None else mood == "happy":

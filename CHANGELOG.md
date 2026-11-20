@@ -1,51 +1,58 @@
-# История изменений
+# Changelog
 
-Формат основан на [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/),
-версии следуют [Semantic Versioning](https://semver.org/lang/ru/).
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-11-20
+
+### Changed
+
+- The command-line interface, diagnosis text, JSON headlines, documentation,
+  and screenshots are now in English.
+
 ## [0.2.2] — 2026-11-18
 
-### Исправлено
+### Fixed
 
-- Устранено возможное падение TUI при отрисовке первого кадра.
-- Ошибки фоновой диагностики теперь возвращают код `2`, а не маскируются как успех.
-- Прямая проверка сайта пробует до трёх IP-адресов вместо одного.
-- Прогресс параллельной проверки сайтов публикуется атомарно и больше не откатывается.
+- The TUI no longer crashes if the first frame is drawn before the chain exists.
+- A background diagnosis error now exits with code `2` instead of looking like success.
+- A direct site check tries up to three IP addresses instead of only the first one.
+- Progress for parallel site checks is published atomically and no longer jumps backward.
 
-### Добавлено
+### Added
 
-- Архитектурная документация и регрессионные тесты для исправленных сценариев.
-- Проверка соответствия версии в документационных скриншотах.
+- Architecture documentation and regression tests for the fixed cases.
+- A check that documentation screenshots show the current version.
 
 ## [0.2.1] — 2026-11-18
 
-### Изменено
+### Changed
 
-- Экран и JSON переведены на единый объект диагностического отчёта.
-- Проверки VPN и сайтов пропускаются, если прямой канал в интернет недоступен.
+- The screen and JSON now share one diagnosis report.
+- VPN and site checks are skipped when the direct path to the internet is down.
 
-### Исправлено
+### Fixed
 
-- DNS-парсер отклоняет повреждённые ответы и не зацикливается на указателях сжатия.
+- The DNS parser rejects malformed replies and no longer loops on compression pointers.
 
 ## [0.2.0] — 2026-10-06
 
-### Изменено
+### Changed
 
-- Проект `netdoctor` переименован в Eugene.
-- Краб Клешня получил имя Юджин.
-- Команда запуска изменена на `eugene`, пакет — на `eugene-crab`.
+- The `netdoctor` project was renamed to Eugene.
+- The crab Klyeshnya was renamed Eugene.
+- The command is now `eugene`, and the distribution is `eugene-crab`.
 
 ## [0.1.0] — 2026-10-03
 
-### Добавлено
+### Added
 
-- Первая версия сетевого доктора: диагностика Wi-Fi, роутера, провайдера,
-  VPN, DNS и доступности сайтов.
+- The first network doctor: Wi-Fi, router, ISP, VPN, DNS, and site-reachability checks.
 
-[Unreleased]: https://github.com/nikmeee/eugene/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/nikmeee/eugene/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/nikmeee/eugene/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/nikmeee/eugene/compare/7b6502c...v0.2.2
 [0.2.1]: https://github.com/nikmeee/eugene/compare/11c120e...7b6502c
 [0.2.0]: https://github.com/nikmeee/eugene/compare/7d831c0...11c120e

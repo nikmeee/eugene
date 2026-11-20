@@ -24,7 +24,7 @@ class DnsNameTests(unittest.TestCase):
         self.assertEqual(_skip_name(raw, 0), len(raw))
 
     def test_compression_pointer_is_not_followed(self):
-        # Указатель на самого себя. Если пойти по нему, цикл не кончится.
+        # A pointer to itself. Following it would never end.
         self.assertEqual(_skip_name(b"\xC0\x00", 0), 2)
 
     def test_label_then_pointer(self):
